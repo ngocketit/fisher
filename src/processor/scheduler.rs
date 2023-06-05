@@ -14,21 +14,19 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::collections::{BinaryHeap, HashMap, HashSet};
-use std::time::Instant;
 use std::sync::{mpsc, Arc, RwLock};
+use std::time::Instant;
 
 use common::prelude::*;
-use common::state::{State, UniqueId};
 use common::serial::Serial;
+use common::state::{State, UniqueId};
 use common::structs::HealthDetails;
 
-use super::thread::{ProcessResult, Thread, ThreadCompleter};
 use super::scheduled_job::ScheduledJob;
+use super::thread::{ProcessResult, Thread, ThreadCompleter};
 use super::types::{Job, JobContext, JobOutput, ScriptId};
 
-
 const STATUS_EVENTS_PRIORITY: isize = 1000;
-
 
 #[cfg(test)]
 #[derive(Debug)]
@@ -49,7 +47,6 @@ impl<S: ScriptsRepositoryTrait> DebugDetails<S> {
     }
 }
 
-
 pub enum SchedulerInput<S: ScriptsRepositoryTrait> {
     Job(Job<S>, isize),
     HealthStatus(mpsc::Sender<HealthDetails>),
@@ -57,7 +54,8 @@ pub enum SchedulerInput<S: ScriptsRepositoryTrait> {
 
     Cleanup,
 
-    #[cfg(test)] DebugDetails(mpsc::Sender<DebugDetails<S>>),
+    #[cfg(test)]
+    DebugDetails(mpsc::Sender<DebugDetails<S>>),
 
     Lock,
     Unlock,
@@ -68,7 +66,6 @@ pub enum SchedulerInput<S: ScriptsRepositoryTrait> {
     StopSignal,
     JobEnded(ScriptId<S>, ThreadCompleter),
 }
-
 
 #[derive(Debug)]
 pub struct Scheduler<S: ScriptsRepositoryTrait + 'static> {
@@ -107,19 +104,19 @@ impl<S: ScriptsRepositoryTrait> Scheduler<S> {
         }
 
         Scheduler {
-            max_threads: max_threads,
-            hooks: hooks,
+            max_threads,
+            hooks,
             jobs_context: Arc::new(RwLock::new(Arc::new(ctx))),
-            state: state,
+            state,
 
             locked: false,
             should_stop: false,
             queue: BinaryHeap::new(),
-            waiting: waiting,
+            waiting,
             threads: HashMap::with_capacity(max_threads as usize),
 
-            input_send: input_send,
-            input_recv: input_recv,
+            input_send,
+            input_recv,
 
             last_cleanup: Instant::now(),
         }
@@ -147,15 +144,18 @@ impl<S: ScriptsRepositoryTrait> Scheduler<S> {
 
             match input {
                 SchedulerInput::Job(job, priority) => {
-                    self.queue_job(
-                        ScheduledJob::new(job, priority, serial.incr()),
-                    );
+                    self.queue_job(ScheduledJob::new(
+                        job,
+                        priority,
+                        serial.incr(),
+                    ));
                     self.run_jobs();
                 }
 
                 SchedulerInput::HealthStatus(return_to) => {
                     // Count the busy threads
-                    let busy_threads = self.threads
+                    let busy_threads = self
+                        .threads
                         .values()
                         .filter(|thread| thread.busy())
                         .count();
@@ -294,7 +294,8 @@ impl<S: ScriptsRepositoryTrait> Scheduler<S> {
                     }
                 }
 
-                input.send(SchedulerInput::JobEnded(job.hook_id(), completer))?;
+                input
+                    .send(SchedulerInput::JobEnded(job.hook_id(), completer))?;
 
                 Ok(())
             },
@@ -441,7 +442,6 @@ impl<S: ScriptsRepositoryTrait> Scheduler<S> {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use std::collections::VecDeque;
@@ -453,21 +453,18 @@ mod tests {
     use super::super::test_utils::*;
     use super::super::Processor;
 
-
     #[test]
     fn test_processor_starting() {
         test_wrapper(|| {
             let repo = Arc::new(Repository::<()>::new());
 
             let processor =
-                Processor::new(1, repo, (), Arc::new(State::new()))
-                    .unwrap();
+                Processor::new(1, repo, (), Arc::new(State::new())).unwrap();
             processor.stop()?;
 
             Ok(())
         });
     }
-
 
     #[test]
     fn test_processor_clean_stop() {
@@ -481,12 +478,8 @@ mod tests {
             });
 
             let repo = Arc::new(repo);
-            let processor = Processor::new(
-                1,
-                repo.clone(),
-                (),
-                Arc::new(State::new()),
-            )?;
+            let processor =
+                Processor::new(1, repo.clone(), (), Arc::new(State::new()))?;
 
             processor.api().queue(repo.job("long", ()).unwrap(), 0)?;
 
@@ -504,7 +497,6 @@ mod tests {
         });
     }
 
-
     fn run_multiple_append(threads: u16, prioritized: bool) -> Result<String> {
         let repo = Repository::<char>::new();
 
@@ -515,12 +507,8 @@ mod tests {
         });
 
         let repo = Arc::new(repo);
-        let processor = Processor::new(
-            threads,
-            repo.clone(),
-            (),
-            Arc::new(State::new()),
-        )?;
+        let processor =
+            Processor::new(threads, repo.clone(), (), Arc::new(State::new()))?;
 
         let api = processor.api();
 
@@ -553,20 +541,17 @@ mod tests {
         Ok(output)
     }
 
-
     #[test]
     fn test_processor_one_thread_correct_order() {
         let output = run_multiple_append(1, false).unwrap();
         assert_eq!(output.as_str(), "0123456789");
     }
 
-
     #[test]
     fn test_processor_one_thread_correct_order_prioritized() {
         let output = run_multiple_append(1, true).unwrap();
         assert_eq!(output.as_str(), "8967452301");
     }
-
 
     #[test]
     fn test_processor_multiple_threads() {
@@ -585,12 +570,8 @@ mod tests {
             });
 
             let repo = Arc::new(repo);
-            let processor = Processor::new(
-                2,
-                repo.clone(),
-                (),
-                Arc::new(State::new()),
-            )?;
+            let processor =
+                Processor::new(2, repo.clone(), (), Arc::new(State::new()))?;
             let api = processor.api();
 
             // Queue ten jobs
@@ -649,12 +630,8 @@ mod tests {
             });
 
             let repo = Arc::new(repo);
-            let processor = Processor::new(
-                1,
-                repo.clone(),
-                (),
-                Arc::new(State::new()),
-            )?;
+            let processor =
+                Processor::new(1, repo.clone(), (), Arc::new(State::new()))?;
             let api = processor.api();
 
             // Queue a wait job
@@ -687,7 +664,6 @@ mod tests {
         });
     }
 
-
     #[test]
     fn test_cleanup_hooks() {
         test_wrapper(|| {
@@ -699,12 +675,8 @@ mod tests {
             });
 
             let repo = Arc::new(repo);
-            let processor = Processor::new(
-                1,
-                repo.clone(),
-                (),
-                Arc::new(State::new()),
-            )?;
+            let processor =
+                Processor::new(1, repo.clone(), (), Arc::new(State::new()))?;
             let api = processor.api();
 
             let mut waitings = VecDeque::new();
