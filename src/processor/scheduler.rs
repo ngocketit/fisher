@@ -43,7 +43,7 @@ impl<S: ScriptsRepositoryTrait> DebugDetails<S> {
             .map(|(key, value)| (*key, value.len()))
             .collect();
 
-        DebugDetails { waiting: waiting }
+        DebugDetails { waiting }
     }
 }
 
