@@ -166,7 +166,7 @@ impl<S: ScriptsRepositoryTrait> Scheduler<S> {
                     }
 
                     return_to.send(HealthDetails {
-                        queued_jobs: queued_jobs,
+                        queued_jobs,
                         busy_threads: busy_threads as u16,
                         max_threads: self.max_threads,
                     })?;
