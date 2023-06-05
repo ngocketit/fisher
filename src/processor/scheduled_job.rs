@@ -20,7 +20,6 @@ use common::serial::Serial;
 
 use super::types::{Job, JobContext, JobOutput, ScriptId};
 
-
 #[derive(Debug)]
 pub struct ScheduledJob<S: ScriptsRepositoryTrait> {
     job: Job<S>,
@@ -31,17 +30,16 @@ pub struct ScheduledJob<S: ScriptsRepositoryTrait> {
 impl<S: ScriptsRepositoryTrait> ScheduledJob<S> {
     pub fn new(job: Job<S>, priority: isize, serial: Serial) -> Self {
         ScheduledJob {
-            job: job,
-            priority: priority,
-            serial: serial,
+            job,
+            priority,
+            serial,
         }
     }
 
     pub fn execute(&self, ctx: &JobContext<S>) -> Result<JobOutput<S>> {
-        self.job.execute(ctx)
-            .chain_err(|| {
-                ErrorKind::ScriptExecutionFailed(self.hook_name().into())
-            })
+        self.job.execute(ctx).chain_err(|| {
+            ErrorKind::ScriptExecutionFailed(self.hook_name().into())
+        })
     }
 
     pub fn hook_id(&self) -> ScriptId<S> {

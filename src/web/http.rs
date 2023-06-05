@@ -13,11 +13,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::net::{Shutdown, SocketAddr, TcpStream};
 use std::io::Write;
-use std::sync::{Arc, Mutex};
-use std::sync::mpsc;
+use std::net::{Shutdown, SocketAddr, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc;
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 use regex::{self, Regex};
@@ -25,12 +25,10 @@ use tiny_http::{self, Method};
 
 use common::prelude::*;
 use requests::Request;
-use web::responses::Response;
 use web::proxies::ProxySupport;
-
+use web::responses::Response;
 
 pub type RequestHandler<App> = Box<fn(&App, &Request, Vec<String>) -> Response>;
-
 
 struct Route {
     method: Method,
@@ -42,7 +40,7 @@ impl Route {
         let regex = Self::regex_from_url(url);
 
         Route {
-            method: method,
+            method,
             regex: Regex::new(&regex).unwrap(),
         }
     }
@@ -79,17 +77,18 @@ impl Route {
         match self.regex.captures(url) {
             Some(captures) => {
                 Some(
-                    captures.iter().skip(1)
-                            .filter_map(|x| x)  // Strip Option<T>, returning T
-                            .map(|x| x.as_str().to_string())
-                            .collect(),
+                    captures
+                        .iter()
+                        .skip(1)
+                        .filter_map(|x| x) // Strip Option<T>, returning T
+                        .map(|x| x.as_str().to_string())
+                        .collect(),
                 )
             }
             None => None,
         }
     }
 }
-
 
 struct Handler<App: Send + Sync + 'static> {
     handler: RequestHandler<App>,
@@ -98,10 +97,7 @@ struct Handler<App: Send + Sync + 'static> {
 
 impl<App: Send + Sync + 'static> Handler<App> {
     fn new(handler: RequestHandler<App>, route: Route) -> Self {
-        Handler {
-            handler: handler,
-            route: route,
-        }
+        Handler { handler, route }
     }
 
     fn matches(&self, method: &Method, url: &str) -> Option<Vec<String>> {
@@ -112,7 +108,6 @@ impl<App: Send + Sync + 'static> Handler<App> {
         (self.handler)(app, req, args)
     }
 }
-
 
 pub struct HttpServer<App: Send + Sync + 'static> {
     app: Arc<App>,
@@ -178,9 +173,10 @@ impl<App: Send + Sync + 'static> HttpServer<App> {
             let handlers = &*handlers_arc.lock().unwrap();
 
             // Prepare some headers which will be sent everytime
-            let server_header = header!(
-                format!("Server: Fisher/{}", env!("CARGO_PKG_VERSION"))
-            );
+            let server_header = header!(format!(
+                "Server: Fisher/{}",
+                env!("CARGO_PKG_VERSION")
+            ));
             let content_type = header!("Content-Type: application/json");
 
             let ignored_method =
@@ -217,10 +213,10 @@ impl<App: Send + Sync + 'static> HttpServer<App> {
                     }
                 })();
 
-                let mut tiny_response =
-                    tiny_http::Response::from_data(
-                        response.json().into_bytes(),
-                    ).with_status_code(response.status());
+                let mut tiny_response = tiny_http::Response::from_data(
+                    response.json().into_bytes(),
+                )
+                .with_status_code(response.status());
 
                 // Add custom headers from the response
                 if let Some(headers) = response.headers() {
@@ -275,20 +271,18 @@ impl<App: Send + Sync + 'static> HttpServer<App> {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use std::time::Duration;
 
-    use tiny_http::Method;
     use hyper;
     use hyper::status::StatusCode;
+    use tiny_http::Method;
 
-    use requests::Request;
-    use web::responses::Response;
-    use utils::testing::*;
     use super::{Handler, HttpServer, Route};
-
+    use requests::Request;
+    use utils::testing::*;
+    use web::responses::Response;
 
     struct DummyData(Vec<String>);
 
@@ -309,10 +303,13 @@ mod tests {
         Handler::new(Box::new(dummy_handler_fn), route)
     }
 
-
     #[test]
     fn test_route_regex_from_url() {
-        macro_rules! conv { ($inp:expr) => { Route::regex_from_url($inp) }};
+        macro_rules! conv {
+            ($inp:expr) => {
+                Route::regex_from_url($inp)
+            };
+        };
 
         assert_eq!(conv!("/"), r"^/(\?.*)?$");
         assert_eq!(conv!("/."), r"^/\.(\?.*)?$");
@@ -324,7 +321,6 @@ mod tests {
             r"^/([a-zA-Z0-9\./_-]+)/([a-zA-Z0-9\./_-]+)/test(\?.*)?$"
         );
     }
-
 
     #[test]
     fn test_route_matches() {
@@ -356,7 +352,6 @@ mod tests {
         assert_eq!(basic.matches(&Method::Get, "/a/t/b"), None);
     }
 
-
     #[test]
     fn test_handlers() {
         let handler = dummy_handler();
@@ -376,7 +371,6 @@ mod tests {
             200
         );
     }
-
 
     #[test]
     fn test_server() {
@@ -410,9 +404,11 @@ mod tests {
         // Stop the server
         server.stop();
 
-        assert!(
-            req!(client, hyper::method::Method::Get, format!("{}/test", url))
-                .is_err()
-        );
+        assert!(req!(
+            client,
+            hyper::method::Method::Get,
+            format!("{}/test", url)
+        )
+        .is_err());
     }
 }

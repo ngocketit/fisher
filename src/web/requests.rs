@@ -13,12 +13,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::net::IpAddr;
 use std::collections::HashMap;
+use std::net::IpAddr;
 
 use tiny_http;
 use url::form_urlencoded;
-
 
 #[derive(Debug, Clone)]
 pub struct WebRequest {
@@ -27,7 +26,6 @@ pub struct WebRequest {
     pub params: HashMap<String, String>,
     pub body: String,
 }
-
 
 impl<'a> From<&'a mut tiny_http::Request> for WebRequest {
     fn from(origin: &'a mut tiny_http::Request) -> WebRequest {
@@ -57,14 +55,13 @@ impl<'a> From<&'a mut tiny_http::Request> for WebRequest {
         };
 
         WebRequest {
-            source: source,
-            headers: headers,
-            params: params,
-            body: body,
+            source,
+            headers,
+            params,
+            body,
         }
     }
 }
-
 
 pub fn params_from_query(query: &str) -> HashMap<String, String> {
     let mut hashmap = HashMap::new();

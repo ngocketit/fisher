@@ -15,10 +15,9 @@
 
 use std::net::IpAddr;
 
-use requests::Request;
 use common::prelude::*;
+use requests::Request;
 use utils;
-
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct ProxySupport {
@@ -27,7 +26,7 @@ pub struct ProxySupport {
 
 impl ProxySupport {
     pub fn new(behind: u8) -> Self {
-        ProxySupport { behind: behind }
+        ProxySupport { behind }
     }
 
     pub fn source_ip(&self, req: &Request) -> Result<IpAddr> {
@@ -72,18 +71,16 @@ impl ProxySupport {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use std::net::IpAddr;
     use std::str::FromStr;
 
-    use utils::testing::*;
     use common::prelude::*;
     use requests::Request;
+    use utils::testing::*;
 
     use super::ProxySupport;
-
 
     // This macro creates a dummy request with a different source IP and,
     // optionally, a custom X-Forwarded-For
@@ -96,15 +93,13 @@ mod tests {
         ($fwd_for:expr) => {{
             let mut req = req!();
             if let Request::Web(ref mut inner) = req {
-                inner.headers.insert(
-                    "X-Forwarded-For".into(),
-                    $fwd_for.into()
-                );
+                inner
+                    .headers
+                    .insert("X-Forwarded-For".into(), $fwd_for.into());
             }
             req
         }};
     }
-
 
     #[test]
     fn test_creation() {
@@ -116,7 +111,6 @@ mod tests {
         let proxy = ProxySupport::new(1);
         assert_eq!(proxy.behind, 1);
     }
-
 
     #[test]
     fn test_source_ip() {
@@ -141,22 +135,15 @@ mod tests {
         assert_err!(p.source_ip(&req!()), ErrorKind::NotBehindProxy);
         assert_ip!(p, req!("127.2.2.2"), "127.2.2.2");
         assert_ip!(p, req!("127.3.3.3, 127.2.2.2"), "127.2.2.2");
-        assert_err!(
-            p.source_ip(&req!("invalid")),
-            ErrorKind::AddrParse(..)
-        );
+        assert_err!(p.source_ip(&req!("invalid")), ErrorKind::AddrParse(..));
 
         // Test with an enabled proxy support with two proxies
         let p = ProxySupport::new(2);
         assert_err!(p.source_ip(&req!()), ErrorKind::NotBehindProxy);
         assert_err!(p.source_ip(&req!("127.2.2.2")), ErrorKind::NotBehindProxy);
         assert_ip!(p, req!("127.3.3.3, 127.2.2.2"), "127.3.3.3");
-        assert_err!(
-            p.source_ip(&req!("invalid")),
-            ErrorKind::AddrParse(..)
-        );
+        assert_err!(p.source_ip(&req!("invalid")), ErrorKind::AddrParse(..));
     }
-
 
     #[test]
     fn test_fix_request() {
