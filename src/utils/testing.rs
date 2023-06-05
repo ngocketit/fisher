@@ -14,49 +14,44 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::collections::HashMap;
+use std::fs;
 use std::net::{IpAddr, Ipv4Addr};
 use std::path::PathBuf;
 use std::sync::{mpsc, Arc};
-use std::fs;
 
 use hyper::client as hyper;
 use hyper::method::Method;
 use tempdir::TempDir;
 
+use common::config::{HttpConfig, RateLimitConfig};
 use common::prelude::*;
 use common::state::State;
 use common::structs::HealthDetails;
-use common::config::{HttpConfig, RateLimitConfig};
 
 use scripts::{Blueprint as HooksBlueprint, Repository as Hooks};
 use scripts::{Job, JobOutput};
 use web::{WebApp, WebRequest};
-
 
 #[macro_export]
 macro_rules! assert_err {
     ($result:expr, $pattern:pat) => {{
         match $result {
             Ok(..) => {
-                panic!("{} didn't error out",
-                    stringify!($result)
-                );
-            },
-            Err(error) => {
-                match *error.kind() {
-                    $pattern => {},
-                    _ => {
-                        panic!("{} didn't error with {}",
-                            stringify!($result),
-                            stringify!($pattern)
-                        );
-                    },
+                panic!("{} didn't error out", stringify!($result));
+            }
+            Err(error) => match *error.kind() {
+                $pattern => {}
+                _ => {
+                    panic!(
+                        "{} didn't error with {}",
+                        stringify!($result),
+                        stringify!($pattern)
+                    );
                 }
             },
         }
     }};
 }
-
 
 #[macro_export]
 macro_rules! hashmap {
@@ -73,7 +68,6 @@ macro_rules! hashmap {
     }};
 }
 
-
 pub fn dummy_web_request() -> WebRequest {
     WebRequest {
         headers: HashMap::new(),
@@ -82,7 +76,6 @@ pub fn dummy_web_request() -> WebRequest {
         body: String::new(),
     }
 }
-
 
 pub fn dummy_job_output() -> JobOutput {
     JobOutput {
@@ -99,7 +92,6 @@ pub fn dummy_job_output() -> JobOutput {
         trigger_status_hooks: true,
     }
 }
-
 
 #[macro_export]
 macro_rules! create_hook {
@@ -126,7 +118,6 @@ macro_rules! create_hook {
         res.unwrap();
     }};
 }
-
 
 pub fn sample_hooks() -> PathBuf {
     // Create a sample directory with some hooks
@@ -210,7 +201,6 @@ pub fn sample_hooks() -> PathBuf {
     tempdir
 }
 
-
 pub enum ProcessorApiCall {
     Queue(Job, isize),
     HealthDetails,
@@ -218,7 +208,6 @@ pub enum ProcessorApiCall {
     Lock,
     Unlock,
 }
-
 
 pub struct FakeProcessorApi {
     sender: mpsc::Sender<ProcessorApiCall>,
@@ -255,7 +244,6 @@ impl ProcessorApiTrait<Hooks> for FakeProcessorApi {
     }
 }
 
-
 pub struct WebAppInstance {
     inst: WebApp<FakeProcessorApi>,
 
@@ -284,17 +272,18 @@ impl WebAppInstance {
                 health_endpoint: health,
             },
             fake_processor,
-        ).unwrap();
+        )
+        .unwrap();
 
         // Create the HTTP client
         let url = format!("http://{}", inst.addr());
         let client = hyper::Client::new();
 
         WebAppInstance {
-            inst: inst,
+            inst,
 
-            url: url,
-            client: client,
+            url,
+            client,
             processor_api_call: chan_recv,
         }
     }
@@ -328,7 +317,6 @@ impl WebAppInstance {
         self.inst.stop();
     }
 }
-
 
 pub struct TestingEnv {
     hooks: Arc<Hooks>,

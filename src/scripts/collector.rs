@@ -13,17 +13,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::fs::{canonicalize, read_dir, ReadDir};
-use std::path::{Path, PathBuf};
 use std::collections::VecDeque;
+use std::fs::{canonicalize, read_dir, ReadDir};
 use std::os::unix::fs::PermissionsExt;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use common::prelude::*;
 use common::state::State;
 
 use scripts::Script;
-
 
 pub(in scripts) struct Collector {
     dirs: VecDeque<ReadDir>,
@@ -42,10 +41,10 @@ impl Collector {
         dirs.push_front(read_dir(&base)?);
 
         Ok(Collector {
-            dirs: dirs,
-            state: state,
+            dirs,
+            state,
             base: base.as_ref().to_path_buf(),
-            recursive: recursive,
+            recursive,
         })
     }
 
@@ -68,9 +67,10 @@ impl Collector {
         let name = match e.strip_prefix(&self.base) {
             Ok(stripped) => stripped,
             Err(_) => &e,
-        }.to_str()
-            .unwrap()
-            .to_string();
+        }
+        .to_str()
+        .unwrap()
+        .to_string();
 
         let exec = canonicalize(&e)?.to_str().unwrap().into();
 
@@ -119,17 +119,15 @@ impl Iterator for Collector {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use std::os::unix::fs::OpenOptionsExt;
     use std::fs;
+    use std::os::unix::fs::OpenOptionsExt;
 
     use common::prelude::*;
     use scripts::test_utils::*;
 
     use super::Collector;
-
 
     fn assert_collected(
         env: &TestEnv,
@@ -151,7 +149,6 @@ mod tests {
         assert_eq!(found, expected.len());
         Ok(())
     }
-
 
     #[test]
     fn test_scripts_collection_collects_all_the_valid_scripts() {
@@ -183,7 +180,6 @@ mod tests {
             Ok(())
         });
     }
-
 
     #[test]
     fn test_scripts_collection_with_invalid_scripts_fails() {

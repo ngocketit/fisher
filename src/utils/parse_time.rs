@@ -17,10 +17,9 @@ use std::fmt;
 use std::result::Result as StdResult;
 use std::str::FromStr;
 
-use serde::de::{Error as DeError, Visitor, Deserialize, Deserializer};
+use serde::de::{Deserialize, Deserializer, Error as DeError, Visitor};
 
 use common::prelude::*;
-
 
 /// Parse a time string and return the equivalent time in seconds.
 ///
@@ -38,19 +37,21 @@ fn parse_time_inner(input: &str) -> Result<usize> {
 
     for (i, c) in input.chars().enumerate() {
         match c {
-            '0' ... '9' => number_len += 1,
+            '0'..='9' => number_len += 1,
             _ => {
                 if number_len > 0 {
-                    number_temp = input[i-number_len..i].parse::<usize>()?;
+                    number_temp = input[i - number_len..i].parse::<usize>()?;
 
                     match c {
-                        's' => {},
+                        's' => {}
                         'm' => number_temp *= 60,
                         'h' => number_temp *= 60 * 60,
                         'd' => number_temp *= 60 * 60 * 24,
-                        _ => return Err(
-                            ErrorKind::TimeStringInvalidChar(c).into()
-                        ),
+                        _ => {
+                            return Err(
+                                ErrorKind::TimeStringInvalidChar(c).into()
+                            )
+                        }
                     }
 
                     number_len = 0;
@@ -58,7 +59,7 @@ fn parse_time_inner(input: &str) -> Result<usize> {
                 } else {
                     Err(ErrorKind::TimeStringExpectedNumber(i))?;
                 }
-            },
+            }
         }
     }
 
@@ -68,7 +69,6 @@ fn parse_time_inner(input: &str) -> Result<usize> {
 
     Ok(result)
 }
-
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct TimeString(u64);
@@ -122,11 +122,9 @@ impl<'de> Deserialize<'de> for TimeString {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::parse_time;
-
 
     #[test]
     fn test_parse_time() {

@@ -26,23 +26,18 @@ use common::state::{IdKind, State, UniqueId};
 use providers::Provider;
 use requests::{Request, RequestType};
 
-
 #[derive(Debug, Clone)]
 pub struct ScriptProvider {
     pub script: Arc<Script>,
     pub provider: Arc<Provider>,
 }
 
-
 lazy_static! {
-    static ref PREFERENCES_HEADER_RE: Regex = Regex::new(
-        r"## Fisher: (.*)"
-    ).unwrap();
-    static ref PROVIDER_HEADER_RE: Regex = Regex::new(
-        r"## Fisher-([a-zA-Z]+): (.*)"
-    ).unwrap();
+    static ref PREFERENCES_HEADER_RE: Regex =
+        Regex::new(r"## Fisher: (.*)").unwrap();
+    static ref PROVIDER_HEADER_RE: Regex =
+        Regex::new(r"## Fisher-([a-zA-Z]+): (.*)").unwrap();
 }
-
 
 #[derive(Debug, Deserialize)]
 struct Preferences {
@@ -69,12 +64,10 @@ impl Preferences {
     }
 }
 
-
 struct LoadHeadersOutput {
     preferences: Preferences,
     providers: Vec<Arc<Provider>>,
 }
-
 
 fn load_headers(file: &str) -> Result<LoadHeadersOutput> {
     let f = File::open(file).unwrap();
@@ -108,10 +101,10 @@ fn load_headers(file: &str) -> Result<LoadHeadersOutput> {
                 Ok(provider) => {
                     providers.push(Arc::new(provider));
                 }
-                Err(mut error) => {
-                    Err(error.chain_err(|| ErrorKind::ScriptParsingError(
-                        file.into(), line_number,
-                    )))?;
+                Err(error) => {
+                    Err(error.chain_err(|| {
+                        ErrorKind::ScriptParsingError(file.into(), line_number)
+                    }))?;
                 }
             }
         }
@@ -123,10 +116,9 @@ fn load_headers(file: &str) -> Result<LoadHeadersOutput> {
         } else {
             Preferences::empty()
         },
-        providers: providers,
+        providers,
     })
 }
-
 
 #[derive(Debug)]
 pub struct Script {
@@ -148,8 +140,8 @@ impl Script {
 
         Ok(Script {
             id: state.next_id(IdKind::HookId),
-            name: name,
-            exec: exec,
+            name,
+            exec,
             priority: headers.preferences.priority(),
             parallel: headers.preferences.parallel(),
             providers: headers.providers,
@@ -200,13 +192,11 @@ impl ScriptTrait for Script {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use common::prelude::*;
     use requests::{Request, RequestType};
     use scripts::test_utils::*;
-
 
     #[test]
     fn test_scripts_are_loaded_properly() {
@@ -315,7 +305,6 @@ mod tests {
         });
     }
 
-
     #[test]
     fn test_requests_can_be_validated_against_scripts() {
         test_wrapper(|env| {
@@ -369,7 +358,6 @@ mod tests {
             Ok(())
         });
     }
-
 
     #[test]
     fn test_script_ids_are_unique() {

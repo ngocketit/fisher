@@ -13,19 +13,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::net::SocketAddr;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use tiny_http::Method;
 
-use common::prelude::*;
 use common::config::HttpConfig;
+use common::prelude::*;
 
 use scripts::Repository;
-use web::http::HttpServer;
 use web::api::WebApi;
-
+use web::http::HttpServer;
 
 pub struct WebApp<A: ProcessorApiTrait<Repository> + 'static> {
     server: HttpServer<WebApi<A>>,
@@ -43,7 +42,10 @@ impl<A: ProcessorApiTrait<Repository>> WebApp<A> {
 
         // Create the web api
         let api = WebApi::new(
-            processor, hooks, locked.clone(), &config.rate_limit,
+            processor,
+            hooks,
+            locked.clone(),
+            &config.rate_limit,
             config.health_endpoint,
         );
 
@@ -64,9 +66,9 @@ impl<A: ProcessorApiTrait<Repository>> WebApp<A> {
         let socket = server.listen(config.bind)?;
 
         Ok(WebApp {
-            server: server,
+            server,
             addr: socket,
-            locked: locked,
+            locked,
         })
     }
 
@@ -87,20 +89,18 @@ impl<A: ProcessorApiTrait<Repository>> WebApp<A> {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use std::io::Read;
 
-    use serde_json;
-    use hyper::status::StatusCode;
-    use hyper::method::Method;
     use hyper::header::Headers;
+    use hyper::method::Method;
+    use hyper::status::StatusCode;
+    use serde_json;
 
     use common::prelude::*;
 
     use utils::testing::*;
-
 
     #[test]
     fn test_startup() {
@@ -121,21 +121,24 @@ mod tests {
         let mut inst = testing_env.start_web(true, 0);
 
         // It shouldn't be possible to call a non-existing hook
-        let res = inst.request(Method::Get, "/hook/invalid.sh")
+        let res = inst
+            .request(Method::Get, "/hook/invalid.sh")
             .send()
             .unwrap();
         assert_eq!(res.status, StatusCode::NotFound);
         assert!(inst.processor_input().is_none());
 
         // Call the example hook without authorization
-        let res = inst.request(Method::Get, "/hook/example.sh?secret=invalid")
+        let res = inst
+            .request(Method::Get, "/hook/example.sh?secret=invalid")
             .send()
             .unwrap();
         assert_eq!(res.status, StatusCode::Forbidden);
         assert!(inst.processor_input().is_none());
 
         // Call the example hook with authorization
-        let res = inst.request(Method::Get, "/hook/example.sh?secret=testing")
+        let res = inst
+            .request(Method::Get, "/hook/example.sh?secret=testing")
             .send()
             .unwrap();
         assert_eq!(res.status, StatusCode::Ok);
@@ -151,26 +154,28 @@ mod tests {
         }
 
         // Call the example hook simulating a Ping
-        let res =
-            inst.request(Method::Get, "/hook/example.sh?request_type=ping")
-                .send()
-                .unwrap();
+        let res = inst
+            .request(Method::Get, "/hook/example.sh?request_type=ping")
+            .send()
+            .unwrap();
         assert_eq!(res.status, StatusCode::Ok);
 
         // Even if the last request succeded, there shouldn't be any job
         assert!(inst.processor_input().is_none());
 
         // Try to call an internal hook (in this case with the Status provider)
-        let res = inst.request(
-            Method::Get,
-            concat!(
-                "/hook/status-example.sh",
-                "?event=job_completed",
-                "&hook_name=trigger-status",
-                "&exit_code=0",
-                "&signal=0",
-            ),
-        ).send()
+        let res = inst
+            .request(
+                Method::Get,
+                concat!(
+                    "/hook/status-example.sh",
+                    "?event=job_completed",
+                    "&hook_name=trigger-status",
+                    "&exit_code=0",
+                    "&signal=0",
+                ),
+            )
+            .send()
             .unwrap();
         assert_eq!(res.status, StatusCode::Forbidden);
 
@@ -178,7 +183,8 @@ mod tests {
         assert!(inst.processor_input().is_none());
 
         // Try to call an hook in a sub directory
-        let res = inst.request(Method::Get, "/hook/sub/hook.sh")
+        let res = inst
+            .request(Method::Get, "/hook/sub/hook.sh")
             .send()
             .unwrap();
         assert_eq!(res.status, StatusCode::Ok);
@@ -189,7 +195,8 @@ mod tests {
 
         // Even if this requets is valid, it should not be processed -- the
         // instance is locked
-        let res = inst.request(Method::Get, "/hook/example.sh?secret=testing")
+        let res = inst
+            .request(Method::Get, "/hook/example.sh?secret=testing")
             .send()
             .unwrap();
         assert_eq!(res.status, StatusCode::ServiceUnavailable);
@@ -199,7 +206,8 @@ mod tests {
         inst.unlock();
 
         // Call the example hook with authorization
-        let res = inst.request(Method::Get, "/hook/example.sh?secret=testing")
+        let res = inst
+            .request(Method::Get, "/hook/example.sh?secret=testing")
             .send()
             .unwrap();
         assert_eq!(res.status, StatusCode::Ok);
@@ -267,7 +275,8 @@ mod tests {
         let mut inst = testing_env.start_web(true, 1);
 
         // Call the example hook without a proxy
-        let res = inst.request(Method::Get, "/hook/example.sh?ip=127.1.1.1")
+        let res = inst
+            .request(Method::Get, "/hook/example.sh?ip=127.1.1.1")
             .send()
             .unwrap();
         assert_eq!(res.status, StatusCode::BadRequest);
@@ -278,7 +287,8 @@ mod tests {
         headers.set_raw("X-Forwarded-For", vec![b"127.1.1.1".to_vec()]);
 
         // Make an example request
-        let res = inst.request(Method::Get, "/hook/example.sh?ip=127.1.1.1")
+        let res = inst
+            .request(Method::Get, "/hook/example.sh?ip=127.1.1.1")
             .headers(headers)
             .send()
             .unwrap();

@@ -31,17 +31,13 @@ use users;
 use common::prelude::*;
 use common::state::UniqueId;
 
-use scripts::Script;
-use requests::Request;
 use providers::Provider;
+use requests::Request;
+use scripts::Script;
 
-
-static DEFAULT_ENV: &[&'static str] = &[
-    "PATH", "LC_ALL", "LANG",
-];
+static DEFAULT_ENV: &[&'static str] = &["PATH", "LC_ALL", "LANG"];
 
 static ENV_PREFIX: &'static str = "FISHER";
-
 
 #[derive(Debug)]
 pub struct Context {
@@ -66,7 +62,6 @@ impl Default for Context {
         }
     }
 }
-
 
 struct EnvBuilderReal<'job> {
     command: &'job mut Command,
@@ -125,7 +120,8 @@ impl<'job> EnvBuilder<'job> {
 
     fn set_prefix(&mut self, prefix: Option<&str>) {
         if let Some(prefix) = prefix {
-            let prefix = prefix.chars()
+            let prefix = prefix
+                .chars()
                 .map(|c| c.to_uppercase().to_string())
                 .collect::<String>();
 
@@ -159,7 +155,9 @@ impl<'job> EnvBuilder<'job> {
     }
 
     fn add_env_unprefixed<K: AsRef<OsStr>, V: AsRef<OsStr>>(
-        &mut self, k: K, v: V,
+        &mut self,
+        k: K,
+        v: V,
     ) {
         match self.inner {
             EnvBuilderInner::Real(ref mut inner) => {
@@ -173,7 +171,6 @@ impl<'job> EnvBuilder<'job> {
                 );
             }
         }
-
     }
 
     pub fn add_env<K: AsRef<OsStr>, V: AsRef<OsStr>>(&mut self, k: K, v: V) {
@@ -182,9 +179,13 @@ impl<'job> EnvBuilder<'job> {
     }
 
     pub fn data_file<'a, P: AsRef<Path>>(
-        &'a mut self, path: P,
-    ) -> Result<&'a mut Write> {
-        let env = path.as_ref().to_str().unwrap()
+        &'a mut self,
+        path: P,
+    ) -> Result<&'a mut dyn Write> {
+        let env = path
+            .as_ref()
+            .to_str()
+            .unwrap()
             .chars()
             .map(|c| c.to_uppercase().to_string())
             .collect::<String>();
@@ -196,20 +197,21 @@ impl<'job> EnvBuilder<'job> {
                 inner.command.env(name, &dest);
 
                 inner.last_file = Some(fs::File::create(&dest)?);
-                Ok(inner.last_file.as_mut().unwrap() as &mut Write)
+                Ok(inner.last_file.as_mut().unwrap() as &mut dyn Write)
             }
             #[cfg(test)]
             EnvBuilderInner::Dummy(ref mut inner) => {
                 let dest = path.as_ref().to_str().unwrap().to_string();
-                inner.env.insert(name.to_str().unwrap().into(), dest.clone());
+                inner
+                    .env
+                    .insert(name.to_str().unwrap().into(), dest.clone());
 
                 inner.files.insert(dest.clone(), Vec::new());
-                Ok(inner.files.get_mut(&dest).unwrap() as &mut Write)
+                Ok(inner.files.get_mut(&dest).unwrap() as &mut dyn Write)
             }
         }
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct Job {
@@ -255,9 +257,8 @@ impl Job {
 
         // Prepare the command's environment
         {
-            let mut builder = EnvBuilder::new(
-                &mut command, &data_directory.path()
-            );
+            let mut builder =
+                EnvBuilder::new(&mut command, &data_directory.path());
             self.prepare_env(&mut builder, ctx)?;
         }
 
@@ -296,7 +297,9 @@ impl Job {
     }
 
     fn prepare_env(
-        &self, builder: &mut EnvBuilder, ctx: &Context,
+        &self,
+        builder: &mut EnvBuilder,
+        ctx: &Context,
     ) -> Result<()> {
         // First of all clear the environment
         builder.clear_env();
@@ -361,7 +364,6 @@ impl JobTrait<Script> for Job {
     }
 }
 
-
 #[derive(Debug, Clone)]
 pub struct JobOutput {
     pub stdout: String,
@@ -395,7 +397,6 @@ impl JobOutput {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
@@ -413,8 +414,7 @@ mod tests {
     use scripts::test_utils::*;
     use utils;
 
-    use super::{Job, Context, DEFAULT_ENV};
-
+    use super::{Context, Job, DEFAULT_ENV};
 
     fn parse_env(content: &str) -> HashMap<&str, &str> {
         let mut result = HashMap::new();
@@ -432,14 +432,12 @@ mod tests {
         result
     }
 
-
     fn create_job(env: &TestEnv, name: &str, req: Request) -> Result<Job> {
         let script = env.load_script(name)?;
         let (_, provider) = script.validate(&req);
 
         Ok(Job::new(Arc::new(script), provider, req))
     }
-
 
     fn content<P: AsRef<Path>>(base: P, name: &str) -> Result<String> {
         let mut file = File::open(&base.as_ref().join(name))?;
@@ -449,7 +447,6 @@ mod tests {
 
         Ok(buf)
     }
-
 
     #[test]
     fn test_job_creation() {
@@ -466,7 +463,6 @@ mod tests {
         });
     }
 
-
     #[test]
     fn test_job_execution() {
         test_wrapper(|env| {
@@ -474,16 +470,10 @@ mod tests {
             let req: Request = dummy_web_request().into();
 
             // Create a successful script
-            env.create_script("success.sh", &[
-                "#!/bin/bash",
-                "exit 0",
-            ])?;
+            env.create_script("success.sh", &["#!/bin/bash", "exit 0"])?;
 
             // Create a failing script
-            env.create_script("fail.sh", &[
-                "#!/bin/bash",
-                "exit 1",
-            ])?;
+            env.create_script("fail.sh", &["#!/bin/bash", "exit 1"])?;
 
             // Execute the successful script
             let job = create_job(env, "success.sh", req.clone())?;
@@ -501,19 +491,21 @@ mod tests {
         })
     }
 
-
     fn collect_env(env: &mut TestEnv, ctx: &Context) -> Result<PathBuf> {
         // Create a script that dumps the environment into files
-        env.create_script("dump.sh", &[
-            r#"#!/bin/bash"#,
-            r#"## Fisher-Testing: {}"#,
-            r#"env"#,
-            r#"b="${FISHER_TESTING_ENV}""#,
-            r#"echo "executed" > "${b}/executed""#,
-            r#"env > "${b}/env""#,
-            r#"pwd > "${b}/pwd""#,
-            r#"cat "${FISHER_REQUEST_BODY}" > "${b}/request_body""#,
-        ])?;
+        env.create_script(
+            "dump.sh",
+            &[
+                r#"#!/bin/bash"#,
+                r#"## Fisher-Testing: {}"#,
+                r#"env"#,
+                r#"b="${FISHER_TESTING_ENV}""#,
+                r#"echo "executed" > "${b}/executed""#,
+                r#"env > "${b}/env""#,
+                r#"pwd > "${b}/pwd""#,
+                r#"cat "${FISHER_REQUEST_BODY}" > "${b}/request_body""#,
+            ],
+        )?;
 
         // Create a temp directory that contains the environment files
         let out = env.tempdir()?;
@@ -521,7 +513,8 @@ mod tests {
         // Create a dummy request
         let mut req = dummy_web_request();
         req.body = "a body!".into();
-        req.params.insert("env".into(), out.to_str().unwrap().into());
+        req.params
+            .insert("env".into(), out.to_str().unwrap().into());
 
         // Start the job
         let job = create_job(env, "dump.sh", req.into())?;
@@ -542,7 +535,6 @@ mod tests {
 
         Ok(out)
     }
-
 
     #[test]
     fn test_job_environment() {
@@ -565,13 +557,19 @@ mod tests {
             // Calculate the list of expected environment variables
             let extra_env = vec![
                 // Variables set by Fisher
-                "FISHER_TESTING_ENV", "FISHER_REQUEST_IP",
-                "FISHER_REQUEST_BODY", "FISHER_TESTING_PREPARED", "HOME",
+                "FISHER_TESTING_ENV",
+                "FISHER_REQUEST_IP",
+                "FISHER_REQUEST_BODY",
+                "FISHER_TESTING_PREPARED",
+                "HOME",
                 "USER",
                 // Variables set by bash
-                "PWD", "SHLVL", "_",
+                "PWD",
+                "SHLVL",
+                "_",
             ];
-            let env_expected = DEFAULT_ENV.iter()
+            let env_expected = DEFAULT_ENV
+                .iter()
                 .chain(extra_env.iter())
                 .collect::<Vec<_>>();
 
@@ -610,7 +608,6 @@ mod tests {
         });
     }
 
-
     #[test]
     fn test_job_environment_with_extra_env() {
         test_wrapper(|mut env| {
@@ -621,7 +618,7 @@ mod tests {
                     extra.insert("TEST_ENV".into(), "yes".into());
                     extra
                 },
-                .. Context::default()
+                ..Context::default()
             };
 
             // Get the execution environment
@@ -635,7 +632,6 @@ mod tests {
             Ok(())
         });
     }
-
 
     #[test]
     fn test_job_environment_with_altered_user() {

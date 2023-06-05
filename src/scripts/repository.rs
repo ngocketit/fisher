@@ -13,8 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::path::{Path, PathBuf};
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 
 use common::prelude::*;
@@ -24,7 +24,6 @@ use requests::Request;
 use scripts::collector::Collector;
 use scripts::jobs::{Job, JobOutput};
 use scripts::script::{Script, ScriptProvider};
-
 
 pub struct ScriptsIter {
     inner: Arc<RwLock<RepositoryInner>>,
@@ -46,12 +45,12 @@ impl Iterator for ScriptsIter {
         match self.inner.read() {
             Ok(guard) => guard,
             Err(poisoned) => poisoned.into_inner(),
-        }.scripts
-            .get(self.count - 1)
-            .cloned()
+        }
+        .scripts
+        .get(self.count - 1)
+        .cloned()
     }
 }
-
 
 pub struct StatusJobsIter {
     inner: Arc<RwLock<RepositoryInner>>,
@@ -95,7 +94,6 @@ impl Iterator for StatusJobsIter {
         }
     }
 }
-
 
 #[derive(Debug)]
 struct RepositoryInner {
@@ -141,7 +139,6 @@ impl RepositoryInner {
         self.by_name.get(name).cloned()
     }
 }
-
 
 #[derive(Debug)]
 pub struct Repository {
@@ -189,7 +186,6 @@ impl ScriptsRepositoryTrait for Repository {
     }
 }
 
-
 #[derive(Debug)]
 pub struct Blueprint {
     added: Vec<Arc<Script>>,
@@ -206,7 +202,7 @@ impl Blueprint {
             collect_paths: Vec::new(),
 
             inner: Arc::new(RwLock::new(RepositoryInner::new())),
-            state: state,
+            state,
         }
     }
 
@@ -267,7 +263,6 @@ impl Blueprint {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use std::fs;
@@ -279,7 +274,6 @@ mod tests {
     use scripts::test_utils::*;
 
     use super::{Blueprint, Repository};
-
 
     #[test]
     fn test_blueprint_allows_adding_scripts() {
@@ -322,7 +316,6 @@ mod tests {
         });
     }
 
-
     #[test]
     fn test_blueprint_changes_are_applies_to_existing_repositories() {
         test_wrapper(|env| {
@@ -359,7 +352,6 @@ mod tests {
             Ok(())
         });
     }
-
 
     #[test]
     fn test_blueprint_can_be_reloaded() {
@@ -432,13 +424,11 @@ mod tests {
 
             // Ensure the script is loaded, and it points to the real path
             let repository = blueprint.repository();
-            let script = repository.get_by_name("script.sh")
+            let script = repository
+                .get_by_name("script.sh")
                 .expect("the script wasn't loaded properly");
 
-            assert_eq!(
-                script.exec(),
-                real.join("script.sh").to_str().unwrap()
-            );
+            assert_eq!(script.exec(), real.join("script.sh").to_str().unwrap());
 
             Ok(())
         });
@@ -490,7 +480,6 @@ mod tests {
             Ok(())
         });
     }
-
 
     #[test]
     fn test_status_hooks_are_correctly_stored() {
