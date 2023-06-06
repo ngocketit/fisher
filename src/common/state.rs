@@ -73,7 +73,7 @@ pub struct State {
 impl State {
     /// Create a new instance of the struct.
     pub fn new() -> Self {
-        State {
+        Self {
             counter: AtomicUsize::new(0),
         }
     }
