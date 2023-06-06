@@ -29,7 +29,7 @@ pub struct ScheduledJob<S: ScriptsRepositoryTrait> {
 
 impl<S: ScriptsRepositoryTrait> ScheduledJob<S> {
     pub fn new(job: Job<S>, priority: isize, serial: Serial) -> Self {
-        ScheduledJob {
+        Self {
             job,
             priority,
             serial,

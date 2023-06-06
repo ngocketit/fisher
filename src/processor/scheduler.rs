@@ -103,7 +103,7 @@ impl<S: ScriptsRepositoryTrait> Scheduler<S> {
             }
         }
 
-        Scheduler {
+        Self {
             max_threads,
             hooks,
             jobs_context: Arc::new(RwLock::new(Arc::new(ctx))),

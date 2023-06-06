@@ -13,17 +13,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::sync::{Arc, Mutex};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::thread;
 use std::fmt;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
+use std::thread;
 
 use common::prelude::*;
 use common::state::{IdKind, State, UniqueId};
 
 use super::scheduled_job::ScheduledJob;
 use super::types::ScriptId;
-
 
 pub enum ProcessResult<S: ScriptsRepositoryTrait + 'static> {
     Rejected(ScheduledJob<S>),
@@ -45,7 +44,6 @@ impl<S: ScriptsRepositoryTrait + 'static> ProcessResult<S> {
     }
 }
 
-
 #[derive(Clone)]
 pub struct ThreadCompleter {
     thread: thread::Thread,
@@ -55,7 +53,7 @@ pub struct ThreadCompleter {
 
 impl ThreadCompleter {
     pub fn new(busy: Arc<AtomicBool>) -> Self {
-        ThreadCompleter {
+        Self {
             thread: thread::current(),
             busy,
             manual: false,
@@ -79,7 +77,6 @@ impl Drop for ThreadCompleter {
         }
     }
 }
-
 
 pub struct Thread<S: ScriptsRepositoryTrait + 'static> {
     id: UniqueId,
@@ -234,27 +231,24 @@ impl<S: ScriptsRepositoryTrait> fmt::Debug for Thread<S> {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use std::sync::{Arc, Mutex};
     use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
     use std::sync::mpsc;
+    use std::sync::{Arc, Mutex};
     use std::time::Instant;
 
-    use common::state::State;
     use common::serial::Serial;
+    use common::state::State;
     use processor::scheduled_job::ScheduledJob;
     use processor::test_utils::*;
 
     use super::Thread;
 
-
     fn job(repo: &Repository<()>, name: &str) -> ScheduledJob<Repository<()>> {
         let job = repo.job(name, ()).expect("job does not exist");
         ScheduledJob::new(job, 0, Serial::zero())
     }
-
 
     fn create_thread() -> Thread<Repository<()>> {
         let state = Arc::new(State::new());
@@ -268,7 +262,6 @@ mod tests {
         )
     }
 
-
     fn timeout_until_true<F: Fn() -> bool>(func: F, error: &'static str) {
         let start = Instant::now();
         loop {
@@ -281,7 +274,6 @@ mod tests {
             }
         }
     }
-
 
     #[test]
     fn test_thread_executes_a_job() {
@@ -315,7 +307,6 @@ mod tests {
             Ok(())
         });
     }
-
 
     #[test]
     fn test_thread_correctly_marked_as_busy() {
@@ -351,7 +342,6 @@ mod tests {
             Ok(())
         });
     }
-
 
     #[test]
     fn test_thread_reports_correct_running_script_id() {
@@ -392,7 +382,6 @@ mod tests {
         });
     }
 
-
     #[test]
     fn test_thread_rejects_new_jobs_when_busy() {
         test_wrapper(|| {
@@ -424,7 +413,6 @@ mod tests {
             Ok(())
         });
     }
-
 
     #[test]
     fn test_thread_allows_multiple_jobs_to_be_executed() {
@@ -459,7 +447,6 @@ mod tests {
             Ok(())
         });
     }
-
 
     #[test]
     fn test_thread_manual_completion() {
